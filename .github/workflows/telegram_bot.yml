@@ -1,17 +1,13 @@
 name: Advance Tele Auto Message Bot
 
 on:
-  # Allows you to trigger the bot manually from the Actions tab
+  # This allows cron-job.org to trigger the bot externally via the GitHub API
   workflow_dispatch:
     inputs:
       time_slot:
-        description: 'JSON Configuration to run (e.g., visitTejaBot)'
+        description: 'JSON Configuration to run'
         required: true
         default: 'visitTejaBot'
-
-  # Scheduled execution: Runs at minute 0 past every 6th hour
-  schedule:
-    - cron: '0 */6 * * *'
 
 jobs:
   run-bot:
@@ -51,12 +47,8 @@ jobs:
 
       - name: Execute Telegram Auto Message Bot
         run: |
-          # If triggered manually, use the input provided. Otherwise, default to visitTejaBot for the cron schedule.
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            TARGET_SLOT="${{ github.event.inputs.time_slot }}"
-          else
-            TARGET_SLOT="visitTejaBot"
-          fi
+          # Uses the input provided by the cron-job.org JSON body
+          TARGET_SLOT="${{ github.event.inputs.time_slot }}"
           
           echo "Starting execution for slot: $TARGET_SLOT"
           python master_bot.py --time $TARGET_SLOT
