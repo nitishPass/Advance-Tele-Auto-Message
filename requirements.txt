@@ -1,1 +1,4 @@
-telethon
+telethon==1.44.0
+rich==13.7.1
+pytz==2024.1
+
