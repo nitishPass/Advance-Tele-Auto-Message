@@ -1,0 +1,62 @@
+name: Advance Tele Auto Message Bot
+
+on:
+  # Allows you to trigger the bot manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      time_slot:
+        description: 'JSON Configuration to run (e.g., visitTejaBot)'
+        required: true
+        default: 'visitTejaBot'
+
+  # Scheduled execution: Runs at minute 0 past every 6th hour
+  schedule:
+    - cron: '0 */6 * * *'
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    env:
+      TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+      TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install telethon==1.44.0 rich==13.7.1 pytz==2024.1; fi
+
+      - name: Restore All Sessions Securely
+        run: |
+          # 1. Decode the single Base64 secret back into the compressed archive
+          echo "${{ secrets.ALL_SESSIONS_BASE64 }}" | base64 --decode > all_sessions.tar.gz
+          
+          # 2. Extract the archive (this perfectly rebuilds the Session/ folder with all 7 files)
+          tar -xzf all_sessions.tar.gz
+          
+          echo "✅ All sessions extracted successfully."
+          
+          # 3. List the files to verify they extracted correctly in the logs
+          ls -l Session/
+
+      - name: Execute Telegram Auto Message Bot
+        run: |
+          # If triggered manually, use the input provided. Otherwise, default to visitTejaBot for the cron schedule.
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TARGET_SLOT="${{ github.event.inputs.time_slot }}"
+          else
+            TARGET_SLOT="visitTejaBot"
+          fi
+          
+          echo "Starting execution for slot: $TARGET_SLOT"
+          python master_bot.py --time $TARGET_SLOT
