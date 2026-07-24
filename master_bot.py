@@ -6,6 +6,7 @@ import argparse
 import time
 from datetime import datetime
 from collections import defaultdict
+import pytz
 
 # Telethon imports
 from telethon import TelegramClient
@@ -199,7 +200,7 @@ async def send_from_account(account_name, session_path, message, group_ids, repe
                     progress.advance(acc_task_id)
                     progress.advance(main_task_id)
                 
-                await asyncio.sleep(1) # ANTI-FLOOD DELAY
+                # await asyncio.sleep(1) # ANTI-FLOOD DELAY (Commented out for precise 15s intervals)
             
             current_loop += 1
             
@@ -231,10 +232,16 @@ async def main():
     time_slot = args.time
     data_file = f"{time_slot}.json"
     
+    # Configure Timezones
+    ist_timezone = pytz.timezone('Asia/Kolkata')
+    start_time_server = datetime.now()
+    start_time_ist = datetime.now(ist_timezone)
+    
     # Beautiful Header
     header_panel = Panel(
         f"[bold cyan]⏰ Time Slot:[/bold cyan] {time_slot}\n"
-        f"[bold cyan]📅 Started at:[/bold cyan] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"[bold cyan]🌐 Server Start Time:[/bold cyan] {start_time_server.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"[bold green]🇮🇳 IST Start Time:[/bold green] {start_time_ist.strftime('%Y-%m-%d %H:%M:%S %Z')}",
         title="[bold yellow]🤖 TELEGRAM BOT MASTER EXECUTION ENGINE 🤖[/bold yellow]",
         border_style="yellow",
         expand=False
@@ -319,9 +326,15 @@ async def main():
     console.print("\n")
     stats.print_stats()
     
+    # Calculate End Times
+    end_time_server = datetime.now()
+    end_time_ist = datetime.now(ist_timezone)
+    
     completion_panel = Panel(
         f"[bold green]✅ {time_slot} Operations Completed Successfully![/bold green]\n"
-        f"[bold cyan]📅 Finished at:[/bold cyan] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"[bold cyan]🌐 Server End Time:[/bold cyan] {end_time_server.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"[bold green]🇮🇳 IST Start Time:[/bold green] {start_time_ist.strftime('%Y-%m-%d %H:%M:%S %Z')}\n"
+        f"[bold green]🇮🇳 IST End Time:[/bold green] {end_time_ist.strftime('%Y-%m-%d %H:%M:%S %Z')}",
         border_style="green",
         expand=False
     )
@@ -336,4 +349,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         console.print("\n[bold red]⚠️ Process interrupted by user. Shutting down gracefully...[/bold red]")
         sys.exit(0)
-
