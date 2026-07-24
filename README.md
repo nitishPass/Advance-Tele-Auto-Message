@@ -14,7 +14,7 @@ An advanced, highly resilient Telegram automation bot built with Python and Tele
 ## 📦 Installation & Local Setup
  1. **Clone the repository:**
    ```bash
-   git clone https://github.com/YourUsername/Advance-Tele-Auto-Message.git
+   git clone https://github.com/nitishPass/Advance-Tele-Auto-Message.git
    cd Advance-Tele-Auto-Message
    
    ```
@@ -74,7 +74,7 @@ To bypass GitHub's unreliable internal cron scheduler, use an external service l
  * Generate a new token with **No expiration** and the **workflow** scope. Copy this token.
 ### 2. Create the External Cron Job
 In cron-job.org, create a new job pointing to your repository's dispatch URL:
- * **URL:** [https://api.github.com/repos/YourUsername/Advance-Tele-Auto-Message/actions/workflows/telegram_bot.yml/dispatches](https://api.github.com/repos/YourUsername/Advance-Tele-Auto-Message/actions/workflows/telegram_bot.yml/dispatches)
+ * **URL:** [https://api.github.com/repos/nitishPass/Advance-Tele-Auto-Message/actions/workflows/telegram_bot.yml/dispatches](https://api.github.com/repos/nitishPass/Advance-Tele-Auto-Message/actions/workflows/telegram_bot.yml/dispatches)
  * **Method:** POST
 **Headers Required:**
  1. Accept: application/vnd.github.v3+json
