@@ -1,0 +1,14 @@
+{
+  "repeat_count": 1200,
+  "interval_seconds": 16,
+  "group_ids": [
+    -1003244562411
+  ],
+  "accounts": [
+    {
+      "name": "Pankaj Visit",
+      "session": "pankajvisit",
+      "message": "/visit IND 1852353345"
+    }
+  ]
+}
