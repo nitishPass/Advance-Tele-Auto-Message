@@ -4,6 +4,7 @@ import json
 import sys
 import argparse
 import time
+import random
 from datetime import datetime
 from collections import defaultdict
 import pytz
@@ -152,7 +153,7 @@ async def send_with_retry(client, chat_id, message, account_name, progress_conte
             
     return False
 
-async def send_from_account(account_name, session_path, message, group_ids, repeat_count, interval_seconds, infinite_loop, progress, main_task_id):
+async def send_from_account(account_name, session_path, message, group_ids, repeat_count, hz_config, infinite_loop, progress, main_task_id):
     client = None
     try:
         # Initialize client with robust connection parameters
@@ -193,14 +194,20 @@ async def send_from_account(account_name, session_path, message, group_ids, repe
                     # Check for 50-message milestone globally
                     if stats.total_sent % 50 == 0 and stats.total_sent > 0:
                         stats.print_stats(progress_context=progress, milestone=stats.total_sent)
+                    
+                    # --- HUMANIZATION: MICRO-BREAKS ---
+                    # Uses per-account sent stats to calculate when to break
+                    acc_sent = stats.account_stats[account_name]["sent"]
+                    if hz_config["break_after_count"] > 0 and acc_sent % hz_config["break_after_count"] == 0:
+                        break_time = random.uniform(hz_config["break_duration_min"], hz_config["break_duration_max"])
+                        progress.print(f"[bold yellow]☕ [{account_name}] Anti-Ban: Taking a human micro-break for {int(break_time)}s...[/bold yellow]")
+                        await asyncio.sleep(break_time)
                 else:
                     stats.add_failure(account_name)
                     
                 if not infinite_loop:
                     progress.advance(acc_task_id)
                     progress.advance(main_task_id)
-                
-                # await asyncio.sleep(1) # ANTI-FLOOD DELAY (Commented out for precise 15s intervals)
             
             current_loop += 1
             
@@ -208,10 +215,11 @@ async def send_from_account(account_name, session_path, message, group_ids, repe
             if not infinite_loop and current_loop >= repeat_count:
                 break
                 
-            # Wait for the custom gap before sending the next round
+            # --- HUMANIZATION: JITTER (RANDOM INTERVAL) ---
             remaining_loops = "∞" if infinite_loop else (repeat_count - current_loop)
-            progress.print(f"[dim]⏳ [{account_name}] Cycle complete. Waiting {interval_seconds}s... ({remaining_loops} loop(s) remaining)[/dim]")
-            await asyncio.sleep(interval_seconds)
+            round_gap = random.uniform(hz_config["round_interval_min"], hz_config["round_interval_max"])
+            progress.print(f"[dim]⏳ [{account_name}] Cycle complete. Waiting {int(round_gap)}s... ({remaining_loops} loop(s) remaining)[/dim]")
+            await asyncio.sleep(round_gap)
             
         progress.print(f"[bold green]✅ [{account_name}] Execution Completed![/bold green]")
         progress.update(acc_task_id, completed=total_iterations)
@@ -263,27 +271,53 @@ async def main():
     group_ids = data.get("group_ids", [])
     accounts_data = data.get("accounts", [])
     repeat_count = data.get("repeat_count", 1)  
-    interval_seconds = data.get("interval_seconds", 10)
     infinite_loop = data.get("infinite_loop", False)
+    
+    # Extract Humanization Config (with fallbacks if old JSON format is used)
+    old_interval = data.get("interval_seconds", 16)
+    hz_data = data.get("humanization_settings", {})
+    hz_config = {
+        "round_interval_min": hz_data.get("round_interval_min", old_interval),
+        "round_interval_max": hz_data.get("round_interval_max", old_interval + 5),
+        "break_after_count": hz_data.get("break_after_count", 60),
+        "break_duration_min": hz_data.get("break_duration_min", 120),
+        "break_duration_max": hz_data.get("break_duration_max", 240)
+    }
+
+    # Filter active accounts
+    active_accounts = []
+    inactive_accounts = []
+    for acc in accounts_data:
+        is_active = acc.get("active", acc.get("Active", True))
+        if is_active:
+            active_accounts.append(acc)
+        else:
+            inactive_accounts.append(acc)
 
     if not group_ids:
         console.print("[bold yellow]⚠️ No group IDs found in configuration![/bold yellow]")
-    if not accounts_data:
-        console.print("[bold yellow]⚠️ No accounts found in data file.[/bold yellow]")
+    if not active_accounts:
+        console.print("[bold yellow]⚠️ No active accounts found in data file.[/bold yellow]")
         sys.exit(1)
+    
+    if inactive_accounts:
+        for acc in inactive_accounts:
+            console.print(f"[dim]⏭️ Skipping [{acc['name']}] - Marked as inactive.[/dim]")
+        console.print()
     
     # Config Summary Table
     cfg_table = Table(show_header=False, box=None)
-    cfg_table.add_row("[bold]Accounts:[/bold]", str(len(accounts_data)))
+    cfg_table.add_row("[bold]Active Accounts:[/bold]", str(len(active_accounts)))
     cfg_table.add_row("[bold]Groups:[/bold]", str(len(group_ids)))
     cfg_table.add_row("[bold]Execution Mode:[/bold]", "[bold green]INFINITE[/bold green]" if infinite_loop else f"{repeat_count} Loops")
-    cfg_table.add_row("[bold]Interval:[/bold]", f"{interval_seconds} seconds")
+    cfg_table.add_row("[bold]Interval Jitter:[/bold]", f"{hz_config['round_interval_min']}s to {hz_config['round_interval_max']}s")
+    cfg_table.add_row("[bold]Anti-Ban Breaks:[/bold]", f"Every {hz_config['break_after_count']} msgs ({hz_config['break_duration_min']}s to {hz_config['break_duration_max']}s pause)")
     
     console.print(Panel(cfg_table, title="[bold blue]📊 Configuration Loaded[/bold blue]", border_style="blue", expand=False))
     console.print()
 
     # Calculate global totals for finite execution
-    global_total_tasks = 0 if infinite_loop else (len(accounts_data) * len(group_ids) * repeat_count)
+    global_total_tasks = 0 if infinite_loop else (len(active_accounts) * len(group_ids) * repeat_count)
     
     # Use Rich Progress Context Manager to handle multiple progress bars safely
     with Progress(
@@ -299,7 +333,7 @@ async def main():
         main_task = progress.add_task("[bold magenta]Global Progress", total=global_total_tasks if not infinite_loop else None)
         
         tasks = []
-        for acc in accounts_data:
+        for acc in active_accounts:
             session_path = os.path.join("Session", acc["session"])
             tasks.append(
                 send_from_account(
@@ -308,7 +342,7 @@ async def main():
                     acc["message"], 
                     group_ids, 
                     repeat_count, 
-                    interval_seconds, 
+                    hz_config, 
                     infinite_loop, 
                     progress,
                     main_task
