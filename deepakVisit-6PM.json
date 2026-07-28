@@ -1,10 +1,10 @@
 {
-  "repeat_count": 1100,
+  "repeat_count": 1111,
   "interval_seconds": 16,
   "infinite_loop": false,
   "humanization_settings": {
     "round_interval_min": 16,
-    "round_interval_max": 18,
+    "round_interval_max": 19,
     "break_after_count": 200,
     "break_duration_min": 120,
     "break_duration_max": 180
