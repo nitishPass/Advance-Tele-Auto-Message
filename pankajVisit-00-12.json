@@ -1,22 +1,22 @@
 {
-  "repeat_count": 1,
+  "repeat_count": 1111,
   "interval_seconds": 16,
   "infinite_loop": false,
   "humanization_settings": {
-    "round_interval_min": 30,
-    "round_interval_max": 35,
+    "round_interval_min": 16,
+    "round_interval_max": 19,
     "break_after_count": 200,
     "break_duration_min": 120,
     "break_duration_max": 180
   },
   "group_ids": [
-    -1003739609039
+    -1003244562411
   ],
   "accounts": [
     {
       "name": "Pankaj Visit",
-      "session": "nitish1visit",
-      "message": "/like 1852353345","/like 14195516670",
+      "session": "pankajvisit",
+      "message": "/visit IND 1852353345",
       "active": true
     }
   ]
